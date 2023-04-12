@@ -1,0 +1,25 @@
+name: Sync upstream branch and tags
+on:
+  schedule:
+    - cron: "25 03 * * *" # Every day at a randomly selected time
+  workflow_dispatch:
+permissions: {}
+jobs:
+  sync:
+    name: Sync upstream branch and tags
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.TOKEN_FOR_SYNC_ACTION }}
+      - name: Sync upstream branch and tags
+        run: |
+          git remote add --no-tags upstream $(gh api repos/${{ github.repository }} --jq .parent.clone_url)
+          git fetch --depth=1 upstream
+          git remote set-head upstream --auto
+          git fetch upstream refs/tags/v\*:refs/tags/upstream/\*
+          git fetch upstream ^refs/tags/v\* refs/tags/\*:refs/tags/upstream/\*
+          git push origin refs/tags/upstream/\*  +refs/remotes/upstream/HEAD:refs/heads/upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
